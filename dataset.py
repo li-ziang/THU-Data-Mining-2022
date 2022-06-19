@@ -61,9 +61,39 @@ class TaobaoDataset(InMemoryDataset):
 
     def process(self):
         print(self.root)
-        user_info = pd.read_csv(osp.join(self.root, 'taobao/raw/user_info_format1.csv'))
         data = HeteroData()
-        data['user'].x = torch.LongTensor(user_info[["age_range","gender"]].to_numpy())
+        train_set = pd.read_csv(osp.join(self.root,'taobao/raw/train_format1.csv'))
+        test_set = pd.read_csv(osp.join(self.root,'taobao/raw/test_format1.csv'))
+        
+        train_user = train_set['user_id'].to_numpy()
+        test_user = test_set['user_id'].to_numpy()
+        all_user = np.unique(np.concatenate((train_user,test_user)))
+        assert all_user.shape[0] == 424170
+
+        train_merchant = train_set['merchant_id'].to_numpy()
+        test_merchant = test_set['merchant_id'].to_numpy()
+        all_merchant = np.unique(np.concatenate((train_merchant,test_merchant)))
+        assert all_merchant.shape[0] == 1994
+
+        merchant_index_to_val = np.zeros(50000,dtype=np.int64)-1
+        for i,merchant in enumerate(all_merchant):
+            merchant_index_to_val[merchant] = i
+        train_set['user_id']-=1
+        test_set['user_id']-=1
+        train_set = train_set.to_numpy()
+        test_set = test_set.to_numpy()[:,:2]
+        train_set[:,1] = merchant_index_to_val[train_set[:,1].astype(int)]
+        test_set[:,1] = merchant_index_to_val[test_set[:,1].astype(int)]
+        data['user'].train = torch.LongTensor(train_set)
+        data['user'].test = torch.LongTensor(test_set)
+
+
+        user_info = pd.read_csv(osp.join(self.root, 'taobao/raw/user_info_format1.csv'))
+        
+        user_x = user_info[["age_range","gender"]].to_numpy()
+        user_x[:,0][np.isnan(user_x[:,0])] = 0
+        user_x[:,1][np.isnan(user_x[:,1])] = 2
+        data['user'].x = torch.FloatTensor(user_x)
         data['user'].id = torch.LongTensor(user_info[["user_id"]].to_numpy())-1
 
         user_log = pd.read_csv(osp.join(self.root,'taobao/raw/user_log_format1.csv'))
@@ -93,42 +123,68 @@ class TaobaoDataset(InMemoryDataset):
         brand 有 8844个, cat 有1658个 seller有4995个
         '''
 
-        k_user = user_log[['user_id','cat_id']].to_numpy()
-        NUM_USERS = 424170 # 从 1到 424170
+        # k_user = user_log[['user_id','cat_id']].to_numpy()
+        # NUM_USERS = 424170 # 从 1到 424170
         NUM_CATS = 1671
-        user_additional_feature = np.zeros([NUM_USERS,NUM_CATS+1])
-        for i in tqdm(range(k_user.shape[0])):
-            user_additional_feature[k_user[i,0]-1,k_user[i,1]] +=1
+        # user_additional_feature = np.zeros([NUM_USERS,NUM_CATS+1])
+        # for i in tqdm(range(k_user.shape[0])):
+        #     user_additional_feature[k_user[i,0]-1,k_user[i,1]] +=1
 
-        user_additional_feature = torch.LongTensor(user_additional_feature)
-        data['user'].id = data['user'].id.reshape(-1)
-        sort_result = data['user'].id.sort()
-        id_map = sort_result[1]
-        data['user'].id = sort_result[0].reshape(-1)
-        data['user'].x = data['user'].x[id_map.reshape(-1)]
-        data['user'].x = torch.cat([data['user'].x,user_additional_feature],dim=1)
+        # user_additional_feature = torch.LongTensor(user_additional_feature)
+        # data['user'].id = data['user'].id.reshape(-1)
+        # sort_result = data['user'].id.sort()
+        # id_map = sort_result[1]
+        # data['user'].id = sort_result[0].reshape(-1)
+        # data['user'].x = data['user'].x[id_map.reshape(-1)]
+        # data['user'].x = torch.cat([data['user'].x,user_additional_feature],dim=1)
 
 
         k_seller = user_log[['seller_id','cat_id']].to_numpy()
-        NUM_SELLERS = 4995
+        NUM_SELLERS = 5000
         seller_additional_feature = np.zeros([NUM_SELLERS,NUM_CATS+1])
         for i in tqdm(range(k_seller.shape[0])):
-            seller_additional_feature[k_seller[i,0]-1,k_seller[i,1]] +=1
+            seller_additional_feature[k_seller[i,0],k_seller[i,1]] +=1
         data['seller'].id = torch.arange(NUM_SELLERS,dtype=torch.long)
-        data['seller'].x = torch.LongTensor(seller_additional_feature)
+        data['seller'].x = torch.FloatTensor(seller_additional_feature[:,:])
+        data['seller'].id = data['seller'].id[all_merchant]
+        data['seller'].x = data['seller'].x[all_merchant]
+        print("{} sellers in total".format(data['seller'].x.shape[0]))
 
         # data['user','buy','seller']
 
         all_log = user_log.to_numpy()
+        mask = np.isin(all_log[:,3].astype(int),all_merchant)
+        all_log = all_log[mask]
+        edge_index = all_log[:,[0,3]].T
+        where_nan = np.isnan(edge_index).sum(axis=0,dtype=bool)
+        where_not_nan = np.logical_not(where_nan)
+        #  "edge_index" 里面有nan
+        #  np.isnan(all_log[:,[0,4]]).sum()=91015
+        all_log = all_log[where_not_nan,:]
+        u, indices = np.unique(all_log[:,[0,3]],return_index=True, axis=0)
+        all_log = all_log[indices]
+        all_log = all_log.astype(int)
+        all_log[:,0] -= 1
+        all_log[:,3] = merchant_index_to_val[all_log[:,3]]
+        data['user','buy','seller'].edge_index = torch.LongTensor(all_log[:,[0,3]].T)
+        data['user','buy','seller'].edge_attr = torch.FloatTensor(all_log[:,[1,2,4,5,6]])
 
-        data['user','buy','seller'].edge_index = torch.LongTensor(all_log[:,[0,4]].T)
-        data['user','buy','seller'].edge_attr = torch.LongTensor(all_log[:,[1,2,3,5,6]])
+        data['seller','bought by','user'].edge_index = torch.LongTensor(all_log[:,[3,0]].T)
+        data['seller','bought by','user'].edge_attr = torch.FloatTensor(all_log[:,[1,2,4,5,6]])
 
-        train_set = pd.read_csv(osp.join(self.root,'taobao/raw/train_format1.csv')).to_numpy()
-        train_set[:,:2] -= 1
-        test_set = pd.read_csv(osp.join(self.root,'taobao/raw/test_format1.csv')).to_numpy()
-        test_set = test_set[:,:2]-1
-        data['user'].train = torch.LongTensor(train_set)
-        data['user'].test = torch.LongTensor(test_set)
+        train_set_add = train_set[:,0]*10000+train_set[:,1]
+        test_set_add = test_set[:,0]*10000+test_set[:,1]
+        all_log_add = all_log[:,0]*10000+all_log[:,3]
+
+        assert((train_set_add<0).sum()==0)
+        assert((test_set_add<0).sum()==0)
+
+        xsorted = np.argsort(all_log_add)
+        train_set_add = np.searchsorted(all_log_add[xsorted], train_set_add)
+        train_indices = xsorted[train_set_add]
+        test_set_add = np.searchsorted(all_log_add[xsorted], test_set_add)
+        test_indices = xsorted[test_set_add]
+        data['user'].train_ind = torch.LongTensor(train_indices)
+        data['user'].test_ind = torch.LongTensor(test_indices)
 
         torch.save(self.collate([data]), self.processed_paths[0])
