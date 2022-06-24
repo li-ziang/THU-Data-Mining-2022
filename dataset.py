@@ -93,7 +93,7 @@ class TaobaoDataset(InMemoryDataset):
         user_x = user_info[["age_range","gender"]].to_numpy()
         user_x[:,0][np.isnan(user_x[:,0])] = 0
         user_x[:,1][np.isnan(user_x[:,1])] = 2
-        data['user'].x = torch.FloatTensor(user_x)
+        data['user'].x1 = torch.LongTensor(user_x)
         data['user'].id = torch.LongTensor(user_info[["user_id"]].to_numpy())-1
 
         user_log = pd.read_csv(osp.join(self.root,'taobao/raw/user_log_format1.csv'))
@@ -123,21 +123,32 @@ class TaobaoDataset(InMemoryDataset):
         brand 有 8844个, cat 有1658个 seller有4995个
         '''
 
-        # k_user = user_log[['user_id','cat_id']].to_numpy()
-        # NUM_USERS = 424170 # 从 1到 424170
+        k_user = user_log[['user_id','cat_id','brand_id']].to_numpy()
+        k_user[np.isnan(k_user)] = 0
+        k_user = k_user.astype(np.int64)
+        NUM_USERS = 424170 # 从 1到 424170
         NUM_CATS = 1671
-        # user_additional_feature = np.zeros([NUM_USERS,NUM_CATS+1])
-        # for i in tqdm(range(k_user.shape[0])):
-        #     user_additional_feature[k_user[i,0]-1,k_user[i,1]] +=1
+        NUM_BRANDS = 8844
+        user_additional_feature = np.zeros([NUM_USERS,NUM_CATS+1])
+        user_additional_feature2 = np.zeros([NUM_USERS,NUM_BRANDS+1])
+        for i in tqdm(range(k_user.shape[0])):
+            user_additional_feature[k_user[i,0]-1,k_user[i,1]] +=1
+            user_additional_feature2[k_user[i,0]-1,k_user[i,2]] +=1
 
-        # user_additional_feature = torch.LongTensor(user_additional_feature)
-        # data['user'].id = data['user'].id.reshape(-1)
-        # sort_result = data['user'].id.sort()
-        # id_map = sort_result[1]
-        # data['user'].id = sort_result[0].reshape(-1)
-        # data['user'].x = data['user'].x[id_map.reshape(-1)]
-        # data['user'].x = torch.cat([data['user'].x,user_additional_feature],dim=1)
+        user_additional_feature = torch.FloatTensor(user_additional_feature)
+        user_additional_feature2 = torch.FloatTensor(user_additional_feature2)
 
+        data['user'].id = data['user'].id.reshape(-1)
+        sort_result = data['user'].id.sort()
+        id_map = sort_result[1]
+        data['user'].id = sort_result[0].reshape(-1)
+        data['user'].x1 = data['user'].x1[id_map.reshape(-1)]
+        values, counts = np.unique(user_log["cat_id"].to_numpy(), return_counts=True)
+        value_ind = values[counts.argsort()[-128:][::-1]]
+        # data['user'].x = data['user'].x[:,value_ind]
+        values, counts = np.unique(user_log["brand_id"].to_numpy(), return_counts=True)
+        value_ind2 = values[counts.argsort()[-512:][::-1]]
+        data['user'].x = torch.cat((user_additional_feature[:,value_ind],user_additional_feature2[:,value_ind2]),1)
 
         k_seller = user_log[['seller_id','cat_id']].to_numpy()
         NUM_SELLERS = 5000
