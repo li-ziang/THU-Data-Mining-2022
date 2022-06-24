@@ -25,11 +25,10 @@ print(final_edge.shape)
 final_edge = torch.unique(final_edge)
 print(final_edge.shape)
 data['user','buy','seller'].edge_index = data['user','buy','seller'].edge_index[:,final_edge]
-data['user','buy','seller'].edge_attr = data['user','buy','seller'].edge_attr[final_edge]
+data['user','buy','seller'].edge_attr = None
 
 data['seller','bought by','user'].edge_index = data['seller','bought by','user'].edge_index[:,final_edge]
-data['seller','bought by','user'].edge_attr = data['seller','bought by','user'].edge_attr[final_edge]
-
+data['seller','bought by','user'].edge_attr = None
 data = T.NormalizeFeatures()(data)
 data['user'].x1 = data['user'].x1.long()
 

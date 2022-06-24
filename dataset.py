@@ -75,7 +75,7 @@ class TaobaoDataset(InMemoryDataset):
         all_merchant = np.unique(np.concatenate((train_merchant,test_merchant)))
         assert all_merchant.shape[0] == 1994
 
-        merchant_index_to_val = np.zeros(50000,dtype=np.int64)-1
+        merchant_index_to_val = np.zeros(5000,dtype=np.int64)-1
         for i,merchant in enumerate(all_merchant):
             merchant_index_to_val[merchant] = i
         train_set['user_id']-=1
@@ -89,7 +89,7 @@ class TaobaoDataset(InMemoryDataset):
 
 
         user_info = pd.read_csv(osp.join(self.root, 'taobao/raw/user_info_format1.csv'))
-        
+        # user_info.head()
         user_x = user_info[["age_range","gender"]].to_numpy()
         user_x[:,0][np.isnan(user_x[:,0])] = 0
         user_x[:,1][np.isnan(user_x[:,1])] = 2
@@ -129,6 +129,7 @@ class TaobaoDataset(InMemoryDataset):
         NUM_USERS = 424170 # 从 1到 424170
         NUM_CATS = 1671
         NUM_BRANDS = 8844
+        # pandas
         user_additional_feature = np.zeros([NUM_USERS,NUM_CATS+1])
         user_additional_feature2 = np.zeros([NUM_USERS,NUM_BRANDS+1])
         for i in tqdm(range(k_user.shape[0])):
@@ -143,6 +144,8 @@ class TaobaoDataset(InMemoryDataset):
         id_map = sort_result[1]
         data['user'].id = sort_result[0].reshape(-1)
         data['user'].x1 = data['user'].x1[id_map.reshape(-1)]
+        # correct order
+
         values, counts = np.unique(user_log["cat_id"].to_numpy(), return_counts=True)
         value_ind = values[counts.argsort()[-128:][::-1]]
         # data['user'].x = data['user'].x[:,value_ind]
@@ -155,10 +158,15 @@ class TaobaoDataset(InMemoryDataset):
         seller_additional_feature = np.zeros([NUM_SELLERS,NUM_CATS+1])
         for i in tqdm(range(k_seller.shape[0])):
             seller_additional_feature[k_seller[i,0],k_seller[i,1]] +=1
+            #!!!!  kai !
+            # seller_additional_feature[k_seller[i,0]-1,k_seller[i,1]] +=1
         data['seller'].id = torch.arange(NUM_SELLERS,dtype=torch.long)
         data['seller'].x = torch.FloatTensor(seller_additional_feature[:,:])
         data['seller'].id = data['seller'].id[all_merchant]
         data['seller'].x = data['seller'].x[all_merchant]
+        # all_merchant = [1,2,3]
+        # [[0,0],[1,1],[3,2],[2,3]]
+
         print("{} sellers in total".format(data['seller'].x.shape[0]))
 
         # data['user','buy','seller']
