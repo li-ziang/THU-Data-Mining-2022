@@ -12,10 +12,11 @@ import pandas as pd
 from tqdm import tqdm
 from typing import Callable, List, Optional
 
+
 class TaobaoDataset(InMemoryDataset):
     def __init__(self, root: str, preprocess: Optional[str] = None,
-                 transform: Optional[Callable] = None,
-                 pre_transform: Optional[Callable] = None):
+            transform: Optional[Callable] = None, 
+            pre_transform: Optional[Callable] = None):
         preprocess = None if preprocess is None else preprocess.lower()
         self.preprocess = preprocess
         assert self.preprocess in [None, 'metapath2vec', 'transe']
@@ -60,7 +61,6 @@ class TaobaoDataset(InMemoryDataset):
         return 'taobao'
 
     def process(self):
-        print(self.root)
         data = HeteroData()
         train_set = pd.read_csv(osp.join(self.root,'taobao/raw/train_format1.csv'))
         test_set = pd.read_csv(osp.join(self.root,'taobao/raw/test_format1.csv'))
@@ -86,7 +86,6 @@ class TaobaoDataset(InMemoryDataset):
         test_set[:,1] = merchant_index_to_val[test_set[:,1].astype(int)]
         data['user'].train = torch.LongTensor(train_set)
         data['user'].test = torch.LongTensor(test_set)
-
 
         user_info = pd.read_csv(osp.join(self.root, 'taobao/raw/user_info_format1.csv'))
         # user_info.head()
@@ -166,6 +165,7 @@ class TaobaoDataset(InMemoryDataset):
         data['seller'].x = data['seller'].x[all_merchant]
         # all_merchant = [1,2,3]
         # [[0,0],[1,1],[3,2],[2,3]]
+        # 加特征：单个seller在训练集中label为1和为0的次数
 
         print("{} sellers in total".format(data['seller'].x.shape[0]))
 
