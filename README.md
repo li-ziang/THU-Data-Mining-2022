@@ -377,17 +377,17 @@ Out[158]:
 
 模型的结构如下：
 
-![image-20220626073723494](/Users/liziang/Library/Application Support/typora-user-images/image-20220626073723494.png)
+![image-20220626073723494](image1.png)
 
 左图是一个常见的同质图的图深度学习模型，右图是其模型结构对应的异构图学习模型，输入为`x_user`和`x_seller`，输出为`out_user`与`out_seller`，它们都是对应的特征向量。两图的差别在于右图会有两个pipeline分别处理不同类型的节点，同时如果两个不同类型的两个的节点之间也会进行数据的传递。详细过程可以在右图中看出。其中的`SAGEConv`是一个graphsage convolution layer，可以理解为一个鲁棒的graph convolution layer (经典GCN的卷积层)。此外我尝试过将`SAGEConv`换成其他的传播层，效果都不如`SAGEConv`，效果见Table 6。
 
 其中`x_seller`就是直接由4.2中描述的feature进行输入，而`x_user`的输入分为三部分，其中age和gender都需要通过一个embedding layer，而`cat_id`和`brand_id`则可以直接拼起来作为输入。embedding layer的维度和dropout对结果有比较大的影响，详见Table 4，tale 5。
 
-![image-20220626072819552](./image-20220626072819552.png)
+![image-20220626082348062](image2.png)
 
 模型输出部分将user embedding，seller  embedding和edge feature拼在一起，过一个线性层，输出结果。
 
-![image-20220626074403788](/Users/liziang/Library/Application Support/typora-user-images/image-20220626074403788.png)
+![image-20220626074403788](image3.png)
 
 
 
