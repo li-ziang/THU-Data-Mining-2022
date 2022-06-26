@@ -14,21 +14,20 @@ import xgboost as xgb
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--hidden_size', type=int, default=64)
+parser.add_argument('--hidden_size', type=int, default=32)
 parser.add_argument('--lr', type=float, default=2e-3)
-parser.add_argument('--wd', type=float, default=1e-5)
+parser.add_argument('--wd', type=float, default=0)
 parser.add_argument('--num_epoch', type=int, default=100)
 parser.add_argument('--batch_size', type=int, default=1000)
 parser.add_argument('--dropout', type=float, default=0.1)
-parser.add_argument('--num_layers', type=int, default=2)
+parser.add_argument('--num_layers', type=int, default=3)
 parser.add_argument('--model', type=str, default='xgboost', choices=['xgboost', 'mlp'])
 parser.add_argument('--feature', type=int, default=1, choices=[1, 2], help='which feature to use')
 parser.add_argument('--new_preprocess', action='store_true', help='whether to run a new preprocess')
-parser.add_argument('--onehot', action='store_true', help='whether to use onehot representation of age and gender')
+parser.add_argument('--no_onehot', action='store_true', help='whether to use onehot representation of age and gender')
 args = parser.parse_args()
 
 
-# input_size不包含age和gender
 class MLP(nn.Module):
     def __init__(self, input_size, hidden_size, dropout, num_layers):
         super(MLP, self).__init__()
@@ -49,7 +48,7 @@ class MLP(nn.Module):
         return x
 
 
-def preprocess1(onehot=False):
+def preprocess1(no_onehot=False):
     print("Using the first preprocess. This might take a few minutes")
     user_log = pd.read_csv('data/taobao/raw/user_log_format1.csv')
     user_log.rename(columns={'seller_id': 'merchant_id'}, inplace=True)
@@ -59,7 +58,7 @@ def preprocess1(onehot=False):
     user_info = pd.read_csv('data/taobao/raw/user_info_format1.csv')
     user_info['age_range'].fillna(0, inplace=True)
     user_info['gender'].fillna(2, inplace=True)
-    if onehot:
+    if not no_onehot:
         user_info = pd.concat((
             user_info,
             pd.get_dummies(user_info['age_range'].astype('int8'), prefix='a'),
@@ -148,11 +147,10 @@ def preprocess1(onehot=False):
     train_data = data[ data['origin'] == 'train' ].drop(columns=['origin', 'user_id', 'merchant_id'])
     test_data = data[ data['origin'] == 'test' ].drop(columns=['label', 'origin'])
     train_x, train_y = train_data.drop(columns=['label']), train_data['label']
-    train_x, valid_x, train_y, valid_y = train_test_split(train_x, train_y, test_size=0.2)
-    return train_x.to_numpy(), valid_x.to_numpy(), train_y.to_numpy(), valid_y.to_numpy(), test_data.to_numpy()
+    return train_x.to_numpy(), train_y.to_numpy(), test_data.to_numpy()
 
 
-def preprocess2(onehot=False):
+def preprocess2(no_onehot=False):
     print("Using the second preprocess. This might take a few minutes")
     train_data = pd.read_csv('data/taobao/raw/train_format1.csv')
     test_data = pd.read_csv('data/taobao/raw/test_format1.csv')
@@ -162,7 +160,7 @@ def preprocess2(onehot=False):
     user_info['gender'].replace(np.nan, 2.0, inplace=True)
     user_log['brand_id'].replace(np.nan, -1.0, inplace=True)
 
-    if onehot:
+    if not no_onehot:
         age_onehot = np.zeros((len(user_info), 8))
         age_ori = user_info['age_range'].to_numpy()
         del user_info['age_range']
@@ -257,8 +255,7 @@ def preprocess2(onehot=False):
     train_y = train_data['label']
     train_x = train_data.drop(columns=['user_id', 'merchant_id', 'label'])
     test_data = test_data.drop(columns=['prob'])
-    train_x, valid_x, train_y, valid_y = train_test_split(train_x, train_y, test_size=0.2)
-    return train_x.to_numpy(), valid_x.to_numpy(), train_y.to_numpy(), valid_y.to_numpy(), test_data.to_numpy()
+    return train_x.to_numpy(), train_y.to_numpy(), test_data.to_numpy()
 
 
 # 用于验证集和测试集评估的函数，无梯度
@@ -369,6 +366,7 @@ def run_xgb(train_x, valid_x, train_y, valid_y, test_data):
     
     test_data = test_data[:, 2:]
     prob = model.predict_proba(test_data)
+
     data_test = pd.read_csv('data/taobao/raw/test_format1.csv')
     data_test['prob'] = pd.DataFrame(prob[:, 1])
     data_test.to_csv('sample_submission.csv', index=False)
@@ -376,7 +374,7 @@ def run_xgb(train_x, valid_x, train_y, valid_y, test_data):
 
 def main():
     if args.model == 'mlp':
-        assert args.onehot == True, 'MLP model only supports onehot representation'
+        assert args.no_onehot == False, 'MLP model only supports onehot representation'
 
     try:
         if args.new_preprocess:   # need to preprocess again
@@ -387,9 +385,9 @@ def main():
     
     except:
         if args.feature == 1:
-            train_x, train_y, test_data = preprocess1(args.onehot)
+            train_x, train_y, test_data = preprocess1(args.no_onehot)
         else:
-            train_x, train_y, test_data = preprocess2(args.onehot)
+            train_x, train_y, test_data = preprocess2(args.no_onehot)
         np.save('data/taobao/processed/train_x.npy', train_x)
         np.save('data/taobao/processed/train_y.npy', train_y)
         np.save('data/taobao/processed/test.npy', test_data)
@@ -398,11 +396,11 @@ def main():
     random.shuffle(idx)
     train_x = train_x[idx]
     train_y = train_y[idx]
-    train_x = train_x[0: int(0.8 * len(train_x))]
     valid_x = train_x[int(0.8 * len(train_x)):]
+    train_x = train_x[0: int(0.8 * len(train_x))]
+    valid_y = train_y[int(0.8 * len(train_y)):]
     train_y = train_y[0: int(0.8 * len(train_y))]
-    valid_y = train_y[int(0.8 * len(train_x)):]
-
+    
     if args.model == 'xgboost':
         run_xgb(train_x, valid_x, train_y, valid_y, test_data)
     else:
