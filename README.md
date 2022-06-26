@@ -22,11 +22,15 @@
 
 ## 0. 运行
 
+运行
+
 ```python
-pip install -r requirments.txt
+pip install -r requirements.txt
 ```
 
-TODO:等xx merge完之后把requirments.txt生成一下
+以获取所有依赖。
+
+TODO: 三种模型的运行方式
 
 ## 1. 数据分析与预处理
 
@@ -46,9 +50,9 @@ DataFrame中有一些数据是缺失的，如果直接将csv读成DataFrame则�
 
 ### 2.1 代码
 
-代码包括`data_xgboost.py`与`run_xgboost.py`。`data_xgboost.py`为特征工程代码，其中`generate_data`利用data_format1构建特征，输出数据用于训练与测试；如果是首次运行的话，会在源文件所在目录下生成`.cache`目录存放数据处理结果，便于后续使用。`run_xgboost.py`内使用`xgboost`库中的XGBClassifier，训练模型并输出测试结果。
+代码包括`data_xgboost.py`与`run.py`。`data_xgboost.py`为特征工程代码，其中`generate_data`利用data_format1构建特征，输出数据用于训练与测试；如果是首次运行的话，会在源文件所在目录下生成`.cache`目录存放数据处理结果，便于后续使用。`run.py`内使用`xgboost`库中的XGBClassifier，训练模型并输出测试结果。
 
-通过`python run_xgboost.py`运行代码。
+通过`python run.py --model xgboost`运行代码。
 
 ### 2.2 特征工程
 
@@ -143,6 +147,6 @@ Out[158]:
 
 * 对于商家节点，因为其个数较少，并且往往一个商家节点会与很多用户节点相连，（$\frac{d(商家)}{d(用户)}=213$其中d表示相应节点的度），所以在商家的节点中提供更多的信息其实是显存友好的。从图结构上考虑，商家节点有更多的可能性将其feature传递到周围的用户节点，这样使用少的显存储存和传递了更多的信息。4.2中的商家节点只使用了`cat_id`作为feature，其实可以增加的feature是`brand_id`。
 
-## 分工
+## 5. 分工
 
 我们采用了每个人主要负责一个模型，其他同学辅助的形式。我们在特征工程上彼此分享了对自己模型有显著贡献的特征。`随机森林+XGBoost`的主要负责人是夏箫，`MLP`的主要负责人是李伟楷，`GraphSAGE`的主要负责人是李子昂。此外，李子昂和李伟楷负责了数据的统计分析和预处理。总体上三个人贡献相同。
