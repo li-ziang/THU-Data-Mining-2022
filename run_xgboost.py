@@ -25,6 +25,6 @@ model.fit(
 )
 
 prob = model.predict_proba(test_data)
-data_test = pd.read_csv('../data/data_format1/test_format1.csv')
+data_test = pd.read_csv('./data/taobao/raw/test_format1.csv')
 data_test['prob'] = pd.DataFrame(prob[:, 1])
 data_test.to_csv('sample_submission.csv', index=False)
