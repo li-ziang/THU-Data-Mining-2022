@@ -150,6 +150,7 @@ class TaobaoDataset(InMemoryDataset):
         # data['user'].x = data['user'].x[:,value_ind]
         values, counts = np.unique(user_log["brand_id"].to_numpy(), return_counts=True)
         value_ind2 = values[counts.argsort()[-512:][::-1]]
+        value_ind2 = value_ind2[value_ind2>=0]
         data['user'].x = torch.cat((user_additional_feature[:,value_ind],user_additional_feature2[:,value_ind2]),1)
 
         k_seller = user_log[['seller_id','cat_id']].to_numpy()
