@@ -22,11 +22,15 @@
 
 ## 0. 运行
 
+运行
+
 ```python
 pip install -r requirments.txt
 ```
 
-TODO:等xx merge完之后把requirments.txt生成一下
+以获取所有依赖。
+
+TODO: 三种模型的运行方式
 
 ## 1. 数据分析与预处理
 
@@ -46,9 +50,9 @@ DataFrame中有一些数据是缺失的，如果直接将csv读成DataFrame则�
 
 ### 2.1 代码
 
-代码包括`data_xgboost.py`与`run_xgboost.py`。`data_xgboost.py`为特征工程代码，其中`generate_data`利用data_format1构建特征，输出数据用于训练与测试；如果是首次运行的话，会在源文件所在目录下生成`.cache`目录存放数据处理结果，便于后续使用。`run_xgboost.py`内使用`xgboost`库中的XGBClassifier，训练模型并输出测试结果。
+代码包括`data_xgboost.py`与`run.py`。`data_xgboost.py`为特征工程代码，其中`generate_data`利用data_format1构建特征，输出数据用于训练与测试；如果是首次运行的话，会在源文件所在目录下生成`.cache`目录存放数据处理结果，便于后续使用。`run.py`内使用`xgboost`库中的XGBClassifier，训练模型并输出测试结果。
 
-通过`python run_xgboost.py`运行代码。
+通过`python run.py --model xgboost`运行代码。
 
 ### 2.2 特征工程
 
