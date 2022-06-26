@@ -279,7 +279,6 @@ run.py中整合了前两种特征工程以及前两种模型（XGBoost和MLP）�
 
 从模型比较的角度来说，XGBoost明显好于MLP。这在深度学习时代比较反常，因为模型表现并不
 
-
 ## 4. GraphSAGE
 
 ### 4.1 代码
@@ -351,17 +350,19 @@ Out[158]:
 
 模型的结构如下：
 
-![image-20220626073723494](/Users/liziang/Library/Application Support/typora-user-images/image-20220626073723494.png)
+![image-20220626073723494](image1.png)
 
-左图是一个常见的同质图的图深度学习模型，右图是其模型结构对应的异构图学习模型，输入为`x_user`和`x_seller`，输出为`out_user`与`out_seller`，它们都是对应的特征向量。两图的差别在于右图会有两个pipeline分别处理不同类型的节点，同时如果两个不同类型的两个的节点之间也会进行数据的传递。详细过程可以在右图中看出。
+左图是一个常见的同质图的图深度学习模型，右图是其模型结构对应的异构图学习模型，输入为`x_user`和`x_seller`，输出为`out_user`与`out_seller`，它们都是对应的特征向量。两图的差别在于右图会有两个pipeline分别处理不同类型的节点，同时如果两个不同类型的两个的节点之间也会进行数据的传递。详细过程可以在右图中看出。其中的`SAGEConv`是一个graphsage convolution layer，可以理解为一个鲁棒的graph convolution layer (经典GCN的卷积层)。此外我尝试过将`SAGEConv`换成其他的传播层，效果都不如`SAGEConv`，效果见Table 6。
 
-其中`x_seller`就是直接由4.2中描述的feature进行输入，而`x_user`的输入分为三部分，其中age和gender都需要通过一个embedding layer，而`cat_id`和`brand_id`则可以直接拼起来作为输入。embedding layer的维度对结果有比较大的影响，详见Table 4。
+其中`x_seller`就是直接由4.2中描述的feature进行输入，而`x_user`的输入分为三部分，其中age和gender都需要通过一个embedding layer，而`cat_id`和`brand_id`则可以直接拼起来作为输入。embedding layer的维度和dropout对结果有比较大的影响，详见Table 4，tale 5。
 
-![image-20220626072819552](./image-20220626072819552.png)
+![image-20220626082348062](image2.png)
 
 模型输出部分将user embedding，seller  embedding和edge feature拼在一起，过一个线性层，输出结果。
 
-![image-20220626074403788](/Users/liziang/Library/Application Support/typora-user-images/image-20220626074403788.png)
+![image-20220626074403788](image3.png)
+
+
 
 ### 4.5 实验
 
@@ -406,6 +407,26 @@ dropout=0.5
 | Model(age emb dim+ gender emb dim) | 8+4   | 32+4  | 64+16 |
 | ---------------------------------- | ----- | ----- | ----- |
 | Valid roc_auc_score                | 0.551 | 0.548 | 0.548 |
+
+Table 6
+
+| Model (layer)       | SAGEConv  | GCNConv | GATConv |
+| ------------------- | --------- | ------- | ------- |
+| Valid roc_auc_score | **0.609** | 0.542   | 0.514   |
+
+
+
+### 4.6 讨论
+
+使用图表示学习的方法在这个工作中并没有取得好的效果。我认为有如下因素。
+
+**特征表示**: 我在模型设计中使用了经典的GNN edge classification的做法，学习edge两端节点的feature，然后将节点的feature拼接起来，认为其是edge feature。但是事实上这个任务的输入的train和test数据的feature中最重要的信息`user_log_format1.csv`中的内容都是通过边输入进来的。在图任务上，好的节点feature应该是与节点本身的性质的息息相关的，而不是与边的性质相关，因为边一般只是用来提供点与点之间的链接信息，让点能够与点之间传播信息。**在这个实验中我一直在使用边数据（用户的购买记录信息）来构造节点的feature，这可能就是GNN模型在这个任务上效果很差的原因。**并且我还最后将边的feature与其两端节点数据拼在一起，过了线性层，这种方法本身就是对显存限制的一种妥协。
+
+GNN本身的优势就是可以将特征归结在数量级更少的点上，这样就能能减少数量级更高的边所需要提供的信息（一般的Graph上的任务都是没有边feature的），也就是节点上可以学习到更加本质的信息。如果这个图比较小（一些比较常见的GNN图可能是十万点乘以一百维度feature数量级的），或者商品总数以及物品总数比较小（比如总数只有100个），我就可以直接将这些特征作为节点的特征，放入模型进行学习，这样可能会比mlp或则xgboost效果更好。
+
+**图结构**：从上面的表述中可以看出，我的作为输入的图是一个二分图，所有的边的左右两端都是一个`user`和一个`seller`，而`user`和`seller`本身没有与同类节点的连边，这一定程度上抑制了信息的传递。但是我并没有想到很好的办法构造这种同类节点的连边，所以并没有进行尝试。
+
+**总结**：这个任务比我见到的很多图上的任务（例如co-authorship，或者protein graph）都复杂，我认为预测结果效果不好的原因是作为输入的原始数据比较难以得到合适的图表示。
 
 ## 5 分工
 
