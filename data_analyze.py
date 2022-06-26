@@ -14,13 +14,13 @@ def main():
     train_data = pd.merge(train_data, user_info, on='user_id', how='left')
     test_data = pd.merge(test_data, user_info, on='user_id', how='left')
 
-    整体情况
+    # 整体情况
     print('#train data:', len(train_data), '; #label:', train_data['label'].sum(), 
         '; label rate:', train_data['label'].sum() / len(train_data))
     print(test_data.shape, train_data.shape)
     print(user_info.shape, user_log.shape)  
 
-    统计不同年龄段的数据分布
+    # 统计不同年龄段的数据分布
     print(len(user_info[user_info['age_range'] == 1]))
     print(len(user_info[user_info['age_range'] == 2]))
     print(len(user_info[user_info['age_range'] == 3]))
@@ -44,7 +44,7 @@ def main():
     plt.title('age distribution')
     plt.savefig('age distribution.png')
 
-    统计不同年龄段的label情况
+    # 统计不同年龄段的label情况
     print('\ntrain data age:')
     for i in range(9):
         tmp = train_data[train_data['age_range'] == i]
@@ -55,7 +55,7 @@ def main():
         tmp = test_data[test_data['age_range'] == i]
         print('age range:', i, '; cnt:', len(tmp))
     
-    统计不同性别的label情况
+    # 统计不同性别的label情况
     print(len(user_info[user_info['gender'] == 0]))
     print(len(user_info[user_info['gender'] == 1]))
     print(len(user_info[user_info['gender'] == 2]))
