@@ -4,7 +4,7 @@ import os
 import pickle
 from sklearn.model_selection import train_test_split
 
-def generate_data(data_path='../data/data_format1', test_size=0.2):
+def generate_data(data_path='./data/taobao/raw', test_size=0.2):
     if os.path.exists('./.cache'):
         X_train = pickle.load(open('.cache/x_train.pkl', 'rb'))
         X_valid = pickle.load(open('.cache/x_valid.pkl', 'rb'))
