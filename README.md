@@ -12,7 +12,7 @@
 
 * MLP
 
-  TODO:
+  MLP是一个经典的神经网络模型。将训练集中的每一个(用户，商家)对作为训练数据，将其统计特征作为输入送入模型，模型最终给出1维的输出。
 
 * GraphSAGE
 
@@ -30,11 +30,12 @@ pip install -r requirments.txt
 
 以获取所有依赖。
 
-TODO: 三种模型的运行方式
+运行XGBoost或MLP：python run.py --其他参数
 
 ## 1. 数据分析与预处理
 
 使用data_format1。原始数据文件需要手动放在`./data/taobao/raw`下，具体如下：
+
 
 ```
 (base) ziang@ubuntu:/data/ziang/data-mining$ ls data/taobao/raw/
@@ -45,6 +46,154 @@ train_format1.csv  user_log_format1.csv
 DataFrame中有一些数据是缺失的，如果直接将csv读成DataFrame则会出现nan，需要进行判断并将其赋值成合适的值。
 
 异构图：图中包含了424170个独立的用户节点，以及1994个商家节点。在`user_info_format1.csv`中，以用户和商家之间的交易信息为边（同一组用户和商家之间只能有一条边），则一共有14052685条边。如果仅以`train_format1.csv`与`test_format1.csv`中的交易数据建边，则有522341条边，其中train集中有260864条边，test集中有261477条边，他们全部都在前面提到的14052685条边中，这也意味着他们的feature都是可以根据`user_info_format1.csv`中的信息建立的。
+
+
+**一，数据分析：用户信息**
+
+1，训练集大小260864，label=1有15952，占比0.06115
+
+测试集大小261477
+
+共424170个用户
+
+54925330条log记录
+
+ 
+
+2，年龄分布：<18岁为1；[18,24]为2； [25,29]为3； [30,34]为4；[35,39]为5；[40,49]为6； > = 50时为7和8; 0表示未知
+
+所有用户的年龄分布：（依次为未知,1,2,3,4,5,6,7,8）
+
+95131
+
+24
+
+52871
+
+111654
+
+79991
+
+40777
+
+35464
+
+6992
+
+1266
+
+​                               
+
+ 
+
+训练集里不同年龄段用户的label比例：
+
+age range: 0 ; cnt: 57062 ; #label: 3322 ; label rate: 0.05821737758928884
+
+age range: 1 ; cnt: 13 ; #label: 0 ; label rate: 0.0
+
+age range: 2 ; cnt: 31026 ; #label: 1531 ; label rate: 0.04934571004963579
+
+age range: 3 ; cnt: 69369 ; #label: 4080 ; label rate: 0.058815897591143015
+
+age range: 4 ; cnt: 51235 ; #label: 3444 ; label rate: 0.06721967405094174
+
+age range: 5 ; cnt: 25618 ; #label: 1793 ; label rate: 0.06998985088609572
+
+age range: 6 ; cnt: 21701 ; #label: 1483 ; label rate: 0.0683378646145339
+
+age range: 7 ; cnt: 4120 ; #label: 249 ; label rate: 0.06043689320388349
+
+age range: 8 ; cnt: 720 ; #label: 50 ; label rate: 0.06944444444444445
+
+ 
+
+测试集：
+
+age range: 0 ; cnt: 57183
+
+age range: 1 ; cnt: 15
+
+age range: 2 ; cnt: 31359
+
+age range: 3 ; cnt: 69155
+
+age range: 4 ; cnt: 51363
+
+age range: 5 ; cnt: 25614
+
+age range: 6 ; cnt: 21681
+
+age range: 7 ; cnt: 4310
+
+age range: 8 ; cnt: 797
+
+整体上年龄越大复购率越高。训练集和测试集的年龄分布差不多。
+
+ 
+
+3，性别分布：0表示女性，1表示男性，2和NULL表示未知
+
+整体用户：
+
+285638女
+
+121670男
+
+16862未知
+
+训练集：
+
+gender: 0 ; cnt: 176414 ; #label: 11387 ; label rate: 0.06454703141474033
+
+gender: 1 ; cnt: 73756 ; #label: 3969 ; label rate: 0.05381257118064971
+
+gender: 2 ; cnt: 10694 ; #label: 596 ; label rate: 0.055732186272676267
+
+ 
+
+测试集：
+
+gender: 0 ; cnt: 176277
+
+gender: 1 ; cnt: 74338
+
+gender: 2 ; cnt: 10862
+
+女性的复购率高于男性。测试集和训练集分布比较一致
+
+ 
+
+ 
+
+**二，数据分析：用户和商家的交互信息**
+
+Label=1：
+
+点击: 14.82541374122367 至少点一次的占比: 0.8952482447342026
+
+加购物车: 0.020937813440320963 至少加一次的占比: 0.014731695085255767
+
+买: 1.6231820461384152 至少买一次的占比: 1.0
+
+收藏: 0.6791624874623872 至少收藏一次的占比: 0.22780842527582748
+
+总log: 17.148696088264796 至少一次记录的占比: 1.0
+
+ 
+
+Label=0：
+
+点击: 8.702631965767296 至少点一次的占比: 0.8848484353563729
+
+加购物车: 0.023926961520872803 至少加一次的占比: 0.017900307049062522
+
+买: 1.3206866139674658 至少买一次的占比: 1.0
+
+收藏: 0.3674544326125302 至少收藏一次的占比: 0.18200823152805906
+
+总log: 10.414699973868165 至少一次记录的占比: 1.0
+
 
 ## 2.XGBoost
 
@@ -87,6 +236,74 @@ DataFrame中有一些数据是缺失的，如果直接将csv读成DataFrame则�
 模型在验证集上的ROC-AUC可以达到0.717；在比赛平台上ROC-AUC为0.684637，为我们组最终提交成绩。
 
 在上述特征中，“商家在训练集中拥有的标签为1或为0的买家数”这一特征对结果影响最为显著，若不使用这两维特征，模型在验证集上的ROC-AUC会降至0.675。这两个特征由于含义为该商家拥有的重复买家数，可直接反映该商家让用户成为重复买家的能力，因此可以作为预测的重要依据。
+
+
+## 3.MLP
+
+### 3.1代码
+
+run.py中整合了前两种特征工程以及前两种模型（XGBoost和MLP），使用者可以在run.py里自由组合任一种特征工程和模型。run.py里的preprocess1和preprocess2函数为两种不同的特征工程，run_mlp和run_xgb函数为运行两种不同模型的代码。evaluate函数被run_mlp函数调用，对模型在验证集上进行评估。
+
+如果是首次运行代码，代码会先进行数据预处理，读取原始数据路径为data/taobao/raw，预处理结果存在data/taobao/processed1路径下，预处理时间为10分钟左右。预处理生成3个文件：train_x.npy, train_y.npy, test.npy。
+
+如果已经运行过代码了，再次运行代码时会自动到data/taobao/processed1路径下读取预处理结果，不会再次进行预处理。
+
+运行代码可以添加的命令行参数：
+
+```python
+parser.add_argument('--hidden_size', type=int, default=32)   # 隐层大小
+parser.add_argument('--lr', type=float, default=2e-3)        # lr
+parser.add_argument('--wd', type=float, default=0)           # wd
+parser.add_argument('--num_epoch', type=int, default=100)    # 训练轮数
+parser.add_argument('--batch_size', type=int, default=1000)  # batch大小
+parser.add_argument('--dropout', type=float, default=0.1)    # dropout
+parser.add_argument('--num_layers', type=int, default=3)     # 层数
+parser.add_argument('--model', type=str, default='xgboost', choices=['xgboost', 'mlp'])  # 模型
+parser.add_argument('--feature', type=int, default=1, choices=[1, 2], help='which feature to use')     # 使用第一种还是第二种特征工程
+parser.add_argument('--new_preprocess', action='store_true', help='whether to run a new preprocess')   # 添加这个参数会重新预处理，更换特征工程时使用
+parser.add_argument('--no_onehot', action='store_true', help='whether to use onehot representation of age and gender')    # 添加这个参数会使得预处理不使用onehot表示，仅限XGBoost模型
+```
+
+
+
+### 3.2特征工程
+
+第二种特征工程仅以“用户-商家”pair为基本单元进行数据统计，没有像第一种特征工程一样单独对用户个人的信息或商家个人的数据做统计。
+
+缺失值处理：
+用户性别的缺失值替换成1种额外性别（这样就共有3种性别），年龄的缺失值替换成1种额外年龄（这样就共有9种年龄），商品brand的缺失值替换为-1。
+
+使用41维特征：
+用户性别(one-hot，3维)、年龄(one-hot，8维)，
+点击数，加购物车数，买的数，收藏数，log数，点击数占log数比例，加购物车数占log数比例，购买数占比，收藏数占比（共9维），
+浏览的天数，有浏览的时候平均每天浏览数、点赞数、加购物车数、购买数、收藏数（共6维），
+浏览的商品的总数、点赞商品总数、加购物车商品总数、购买总数、收藏总数（5维），
+浏览的品牌的总数、点赞品牌总数、加购物车品牌总数、购买总数、收藏总数（5维），
+浏览的商品类别总数，点赞类别总数、加购物车类别总数、购买类别总数、收藏总数（共5维）
+
+
+
+### 3.3模型训练机制
+
+使用3层MLP模型。按8:2比例划分训练集和验证集。采用带早停机制的训练，当验证集上的rocauc低于此前最高验证集rocauc时把patience加一，当patience达到总轮数一半时停止训练。然后用验证集上跑出最高rocauc时刻的模型去跑测试集。
+
+
+
+### 3.4前两种特征工程与算法的分析
+
+#### 模型与特征工程对比
+
+我们对两钟特征工程在两种模型上的表现进行了对比实验。我们按照8:2的比例划分训练集和验证集，下表给出了验证集上的结果，下表结果为5次结果的平均：
+
+|         | 特征工程1 | 特征工程2 |
+| ------- | --------- | --------- |
+| XGBoost | todo      | 0.6223    |
+| MLP     | 0.5000    | 0.6183    |
+
+第一种特征工程在XGBoost上表现很好但在MLP上表现很差。第二种特征工程在两个模型上表现差不多，都不算很好。
+
+从模型比较的角度来说，XGBoost明显好于MLP。这在深度学习时代比较反常，因为模型表现并不
+
 
 ## 4. GraphSAGE
 
