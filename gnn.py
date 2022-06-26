@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score
 import numpy as np
 
 
-dataset = TaobaoDataset("/data/ziang/data-mining/data/")
+dataset = TaobaoDataset("/lfs/hyperturing1/0/ziangli/data-mining/data/")
 print("load done")
 data = dataset[0]
 
@@ -25,10 +25,11 @@ print(final_edge.shape)
 final_edge = torch.unique(final_edge)
 print(final_edge.shape)
 data['user','buy','seller'].edge_index = data['user','buy','seller'].edge_index[:,final_edge]
-data['user','buy','seller'].edge_attr = None
+data['user','buy','seller'].edge_attr = data['user','buy','seller'].edge_attr[final_edge]
 
 data['seller','bought by','user'].edge_index = data['seller','bought by','user'].edge_index[:,final_edge]
-data['seller','bought by','user'].edge_attr = None
+data['seller','bought by','user'].edge_attr = data['seller','bought by','user'].edge_attr[final_edge]
+data['user','buy','seller'].edge_attr = F.normalize(data['user','buy','seller'].edge_attr,dim=0)
 data = T.NormalizeFeatures()(data)
 data['user'].x1 = data['user'].x1.long()
 
@@ -48,9 +49,9 @@ class HeteroGNN(torch.nn.Module):
             self.convs.append(conv)
         self.drop_rate = dropout
         
-        self.lin = Linear(hidden_channels*2, 1)
+        self.lin = Linear(hidden_channels*2+5, 1)
 
-    def forward(self, x_dict, x1, edge_index_dict,mask=None):
+    def forward(self, x_dict, x1, edge_index_dict,mask=None,ind=None, edge_attr=None):
         x_user = x1
         x_user_age = self.embedding_age(x_user[:,0])
         x_user_gender = self.embedding_gender(x_user[:,1])
@@ -62,8 +63,7 @@ class HeteroGNN(torch.nn.Module):
         if mask is not None:
             x_dict_user = x_dict['user'][mask[:,0].reshape(-1)]
             x_dict_seller = x_dict['seller'][mask[:,1].reshape(-1)]
-            x=torch.cat((x_dict_user,x_dict_seller),1)
-
+            x=torch.cat((x_dict_user,x_dict_seller,edge_attr[ind]),1)
             x = self.lin(x)
             return torch.sigmoid(x).reshape(-1)
 
@@ -75,23 +75,23 @@ optimizer = optim.Adam(model.parameters(), lr=0.02, weight_decay=5e-4)
 with torch.no_grad():  # Initialize lazy modules.
      out = model(data.x_dict,data['user'].x1, data.edge_index_dict)
 
-def train(model, optimizer, data, train_mask,train_Y):
+def train(model, optimizer, data, train_mask, train_ind, train_Y, edge_attr):
     # print("Training...")
     model.train()
     optimizer.zero_grad()
     # mask = data['user'].train
-    out = model(data.x_dict, data['user'].x1, data.edge_index_dict,mask = train_mask)
+    out = model(data.x_dict, data['user'].x1, data.edge_index_dict,mask = train_mask,ind=train_ind, edge_attr= edge_attr)
     loss = F.mse_loss(out, train_Y)
     loss.backward()
     optimizer.step()
     # print(loss)
     return float(loss)
 
-def evaluate(model, data, val_mask, val_Y,):
+def evaluate(model, data, val_mask, val_ind, val_Y,edge_attr):
 
     model.eval()
     with torch.no_grad():
-        out = model(data.x_dict,data['user'].x1, data.edge_index_dict,mask = val_mask)
+        out = model(data.x_dict,data['user'].x1, data.edge_index_dict,mask = val_mask,ind=val_ind, edge_attr= edge_attr)
     # print(out.shape,val_Y.shape)
     rocauc = roc_auc_score(val_Y.cpu().numpy(),out.cpu().numpy())
     return rocauc
@@ -106,13 +106,14 @@ train_mask = mask[train_ind]
 val_mask = mask[val_ind]
 train_Y = Y[train_ind]
 val_Y = Y[val_ind]
+edge_attr = data['user','buy','seller'].edge_attr
 
 loss_list = []
 acc_list = []
 from tqdm import tqdm
 for i in tqdm(range(1000)):
-    loss = train(model, optimizer, data, train_mask,train_Y )
-    rocauc = evaluate(model, data, val_mask, val_Y)
+    loss = train(model, optimizer, data, train_mask, train_ind, train_Y, edge_attr )
+    rocauc = evaluate(model, data, val_mask, val_ind, val_Y, edge_attr)
     loss_list.append(loss)
     acc_list.append(rocauc)
     # print(rocauc)
