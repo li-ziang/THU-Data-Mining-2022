@@ -14,60 +14,60 @@ def main():
     train_data = pd.merge(train_data, user_info, on='user_id', how='left')
     test_data = pd.merge(test_data, user_info, on='user_id', how='left')
 
-    # 整体情况
-    # print('#train data:', len(train_data), '; #label:', train_data['label'].sum(), 
-    #     '; label rate:', train_data['label'].sum() / len(train_data))
-    # print(test_data.shape, train_data.shape)
-    # print(user_info.shape, user_log.shape)  
+    整体情况
+    print('#train data:', len(train_data), '; #label:', train_data['label'].sum(), 
+        '; label rate:', train_data['label'].sum() / len(train_data))
+    print(test_data.shape, train_data.shape)
+    print(user_info.shape, user_log.shape)  
 
-    # 统计不同年龄段的数据分布
-    # print(len(user_info[user_info['age_range'] == 1]))
-    # print(len(user_info[user_info['age_range'] == 2]))
-    # print(len(user_info[user_info['age_range'] == 3]))
-    # print(len(user_info[user_info['age_range'] == 4]))
-    # print(len(user_info[user_info['age_range'] == 5]))
-    # print(len(user_info[user_info['age_range'] == 6]))
-    # print(len(user_info[user_info['age_range'] == 7]))
-    # print(len(user_info[user_info['age_range'] == 8]))
-    # print(len(user_info[user_info['age_range'] == 0]))
-    # x = np.array(["NULL","<18","18-24","25-29","30-34","35-39","40-49",">=50"])
-    # y = np.array([user_info[user_info['age_range'] == 0]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 1]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 2]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 3]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 4]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 5]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 6]['age_range'].count(),
-    #             user_info[user_info['age_range'] == 7]['age_range'].count() + user_info[user_info['age_range'] == 8]['age_range'].count()])
-    # plt.bar(x, y, label='number')
-    # plt.legend()
-    # plt.title('age distribution')
-    # plt.savefig('age distribution.png')
+    统计不同年龄段的数据分布
+    print(len(user_info[user_info['age_range'] == 1]))
+    print(len(user_info[user_info['age_range'] == 2]))
+    print(len(user_info[user_info['age_range'] == 3]))
+    print(len(user_info[user_info['age_range'] == 4]))
+    print(len(user_info[user_info['age_range'] == 5]))
+    print(len(user_info[user_info['age_range'] == 6]))
+    print(len(user_info[user_info['age_range'] == 7]))
+    print(len(user_info[user_info['age_range'] == 8]))
+    print(len(user_info[user_info['age_range'] == 0]))
+    x = np.array(["NULL","<18","18-24","25-29","30-34","35-39","40-49",">=50"])
+    y = np.array([user_info[user_info['age_range'] == 0]['age_range'].count(),
+                user_info[user_info['age_range'] == 1]['age_range'].count(),
+                user_info[user_info['age_range'] == 2]['age_range'].count(),
+                user_info[user_info['age_range'] == 3]['age_range'].count(),
+                user_info[user_info['age_range'] == 4]['age_range'].count(),
+                user_info[user_info['age_range'] == 5]['age_range'].count(),
+                user_info[user_info['age_range'] == 6]['age_range'].count(),
+                user_info[user_info['age_range'] == 7]['age_range'].count() + user_info[user_info['age_range'] == 8]['age_range'].count()])
+    plt.bar(x, y, label='number')
+    plt.legend()
+    plt.title('age distribution')
+    plt.savefig('age distribution.png')
 
-    # 统计不同年龄段的label情况
-    # print('\ntrain data age:')
-    # for i in range(9):
-    #     tmp = train_data[train_data['age_range'] == i]
-    #     print('age range:', i, '; cnt:', len(tmp), '; #label:', tmp['label'].sum(), 
-    #         '; label rate:', tmp['label'].sum() / len(tmp))
-    # print('\ntest data age:')
-    # for i in range(9):
-    #     tmp = test_data[test_data['age_range'] == i]
-    #     print('age range:', i, '; cnt:', len(tmp))
+    统计不同年龄段的label情况
+    print('\ntrain data age:')
+    for i in range(9):
+        tmp = train_data[train_data['age_range'] == i]
+        print('age range:', i, '; cnt:', len(tmp), '; #label:', tmp['label'].sum(), 
+            '; label rate:', tmp['label'].sum() / len(tmp))
+    print('\ntest data age:')
+    for i in range(9):
+        tmp = test_data[test_data['age_range'] == i]
+        print('age range:', i, '; cnt:', len(tmp))
     
-    # 统计不同性别的label情况
-    # print(len(user_info[user_info['gender'] == 0]))
-    # print(len(user_info[user_info['gender'] == 1]))
-    # print(len(user_info[user_info['gender'] == 2]))
-    # print('\ntrain data gender:')
-    # for i in range(3):
-    #     tmp = train_data[train_data['gender'] == i]
-    #     print('gender:', i, '; cnt:', len(tmp), '; #label:', tmp['label'].sum(), 
-    #         '; label rate:', tmp['label'].sum() / len(tmp))
-    # print('\ntest data gender:')
-    # for i in range(3):
-    #     tmp = test_data[test_data['gender'] == i]
-    #     print('gender:', i, '; cnt:', len(tmp))
+    统计不同性别的label情况
+    print(len(user_info[user_info['gender'] == 0]))
+    print(len(user_info[user_info['gender'] == 1]))
+    print(len(user_info[user_info['gender'] == 2]))
+    print('\ntrain data gender:')
+    for i in range(3):
+        tmp = train_data[train_data['gender'] == i]
+        print('gender:', i, '; cnt:', len(tmp), '; #label:', tmp['label'].sum(), 
+            '; label rate:', tmp['label'].sum() / len(tmp))
+    print('\ntest data gender:')
+    for i in range(3):
+        tmp = test_data[test_data['gender'] == i]
+        print('gender:', i, '; cnt:', len(tmp))
 
     # 统计交易信息
     user_log_clk = user_log[user_log['action_type'] == 0]
